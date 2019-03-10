@@ -23,6 +23,9 @@ class TaskRunner {
     }
     async createWorker() {
         const newWorker = child_process_1.fork(workerPath, [], { stdio: 'inherit' });
+        newWorker.on('error', err => {
+            console.error('Error creating terser worker', err);
+        });
         await new Promise(resolve => {
             const waitReady = msg => {
                 if (msg.type === 'ready') {
@@ -40,7 +43,7 @@ class TaskRunner {
             if (!this.workers.length)
                 await this.createWorker();
             let worker = this.workers.shift();
-            if (!worker || worker.killed) {
+            if (!worker || !worker.connected || worker.killed) {
                 await this.createWorker();
                 worker = this.workers.shift();
             }
@@ -48,6 +51,7 @@ class TaskRunner {
                 const cleanup = () => {
                     worker.removeListener('message', waitResult);
                     worker.removeListener('close', handleClose);
+                    this.workers.push(worker);
                 };
                 const handleClose = (code, signal) => {
                     cleanup();
@@ -63,7 +67,6 @@ class TaskRunner {
                 worker.on('close', handleClose);
                 worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
             });
-            this.workers.push(worker);
             return result;
         }
         else {
