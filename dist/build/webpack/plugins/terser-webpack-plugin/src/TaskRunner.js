@@ -37,7 +37,7 @@ class TaskRunner {
         });
         this.workers.push(newWorker);
     }
-    async runTask(options) {
+    async runTask(options, retry) {
         if (this.concurrency > 1) {
             // Create worker since one isn't available
             if (!this.workers.length)
@@ -67,6 +67,11 @@ class TaskRunner {
                 worker.on('close', handleClose);
                 if (!worker.connected) {
                     console.log('worker is not connected can not send');
+                    if (retry) {
+                        console.log('Already retried, fail task');
+                        return { error: 'failed to run worker' };
+                    }
+                    return this.runTask(options, true);
                 }
                 worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
             });
