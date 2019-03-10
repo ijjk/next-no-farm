@@ -14,7 +14,8 @@ process.addListener('message', msg => {
             process.send({ type: 'result', result: minify_1.default(options) });
         }
         catch (error) {
-            process.send({ type: 'result', result: { error } });
+            console.error(error);
+            process.send({ type: 'result', result: { error: error.message } });
         }
     }
 });

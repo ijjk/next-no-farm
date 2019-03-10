@@ -39,7 +39,11 @@ class TaskRunner {
             // Create worker since one isn't available
             if (!this.workers.length)
                 await this.createWorker();
-            const worker = this.workers.shift();
+            let worker = this.workers.shift();
+            if (!worker || worker.killed) {
+                await this.createWorker();
+                worker = this.workers.shift();
+            }
             const result = await new Promise(resolve => {
                 const cleanup = () => {
                     worker.removeListener('message', waitResult);
