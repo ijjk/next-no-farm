@@ -9,7 +9,7 @@ const send = msg => {
         return console.log('process not connected, not sending');
     process.send(msg);
 };
-process.addListener('message', msg => {
+process.on('message', msg => {
     if (msg.type === 'run') {
         try {
             // 'use strict' => this === undefined (Clean Scope)
@@ -26,5 +26,6 @@ process.addListener('message', msg => {
     }
 });
 send({ type: 'ready' });
+console.log('sent ready');
 // keep process alive
 setInterval(() => { }, 30 * 1000);

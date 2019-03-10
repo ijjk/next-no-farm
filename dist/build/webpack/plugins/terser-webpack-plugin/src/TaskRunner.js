@@ -65,6 +65,9 @@ class TaskRunner {
                 };
                 worker.on('message', waitResult);
                 worker.on('close', handleClose);
+                if (!worker.connected) {
+                    console.log('worker is not connected can not send');
+                }
                 worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
             });
             return result;
