@@ -127,6 +127,7 @@ class TaskRunner {
     }
     exit() {
         this.workers.forEach(worker => worker.kill());
+        this.workers = [];
         this.sema.drain();
     }
 }
