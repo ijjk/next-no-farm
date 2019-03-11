@@ -21,6 +21,7 @@ class TaskRunner {
         this.concurrency = is_ci_1.isCi ? 2 : cpus.length - 1 || 1;
         this.workers = [];
         this.sema = new async_sema_1.default(this.concurrency);
+        console.log('Using concurrency', this.concurrency);
     }
     async createWorker() {
         const newWorker = child_process_1.fork(workerPath, [], { stdio: 'inherit' });
@@ -52,11 +53,13 @@ class TaskRunner {
                 const cleanup = () => {
                     worker.removeListener('message', waitResult);
                     worker.removeListener('close', handleClose);
-                    this.workers.push(worker);
+                    if (worker.connected)
+                        this.workers.push(worker);
                 };
                 const handleClose = (code, signal) => {
                     cleanup();
-                    resolve({ error: 'Terser worker exited unexpectedly' });
+                    console.log('Terser worker exited unexpectedly');
+                    resolve(minify_1.default(options));
                 };
                 const waitResult = msg => {
                     if (msg.type === 'result') {
