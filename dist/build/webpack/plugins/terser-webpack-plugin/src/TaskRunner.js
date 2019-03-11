@@ -71,7 +71,7 @@ class TaskRunner {
                         console.log('Already retried, fail task');
                         resolve({ error: 'failed to run worker' });
                     }
-                    resolve(this.runTask(options, true));
+                    this.runTask(options, true).then(result => resolve(result));
                 }
                 worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
             });
@@ -101,6 +101,9 @@ class TaskRunner {
             const enqueue = async () => {
                 await this.sema.acquire();
                 this.runTask(task).then(result => {
+                    if (result.error) {
+                        console.error('Got error from runTask', result.error);
+                    }
                     const done = () => {
                         this.sema.release();
                         step(index, result);
