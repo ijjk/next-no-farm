@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const os_1 = __importDefault(require("os"));
-const is_ci_1 = require("is-ci");
+const is_ci_1 = __importDefault(require("is-ci"));
 const async_sema_1 = __importDefault(require("async-sema"));
 const cacache_1 = __importDefault(require("cacache"));
 const minify_1 = __importDefault(require("./minify"));
@@ -18,7 +18,7 @@ class TaskRunner {
         // In some cases cpus() returns undefined
         // https://github.com/nodejs/node/issues/19022
         const cpus = os_1.default.cpus() || { length: 1 };
-        this.concurrency = is_ci_1.isCi ? 2 : cpus.length - 1 || 1;
+        this.concurrency = is_ci_1.default ? 2 : cpus.length - 1 || 1;
         this.workers = [];
         this.sema = new async_sema_1.default(this.concurrency);
         console.log('Using concurrency', this.concurrency);
