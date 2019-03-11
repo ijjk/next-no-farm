@@ -69,9 +69,9 @@ class TaskRunner {
                     console.log('worker is not connected can not send');
                     if (retry) {
                         console.log('Already retried, fail task');
-                        return { error: 'failed to run worker' };
+                        resolve({ error: 'failed to run worker' });
                     }
-                    return this.runTask(options, true);
+                    resolve(this.runTask(options, true));
                 }
                 worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
             });
@@ -104,6 +104,7 @@ class TaskRunner {
                     const done = () => {
                         this.sema.release();
                         step(index, result);
+                        console.log('Completed task ' + index + '/' + tasks.length);
                     };
                     if (this.cacheDir && !result.error) {
                         cacache_1.default
