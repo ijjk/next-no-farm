@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const chalk_1 = __importDefault(require("chalk"));
 const unistore_1 = __importDefault(require("next/dist/compiled/unistore"));
+const readline_1 = __importDefault(require("readline"));
 const exit_1 = require("./exit");
 exports.store = unistore_1.default({ appUrl: null, bootstrap: true });
 process.stdout.write('\n'.repeat(process.stdout.rows || 1));
@@ -13,8 +14,8 @@ exit_1.onExit(() => {
     process.stdout.write('\u001b[?25h');
 });
 exports.store.subscribe(state => {
-    // readline.cursorTo(process.stdout, 0, 0)
-    // readline.clearScreenDown(process.stdout)
+    readline_1.default.cursorTo(process.stdout, 0, 0);
+    readline_1.default.clearScreenDown(process.stdout);
     if (state.bootstrap) {
         console.log(chalk_1.default.cyan('Starting the development server ...'));
         if (state.appUrl) {

@@ -108,6 +108,7 @@ function getBaseWebpackConfig(dir, { dev = false, isServer = false, buildId, con
         ],
         optimization: isServer ? {
             splitChunks: false,
+            minimize: target === 'serverless',
             minimizer: target === 'serverless' ? [
                 new index_1.TerserPlugin(Object.assign({}, terserPluginConfig, { terserOptions: {
                         compress: false,
@@ -143,6 +144,7 @@ function getBaseWebpackConfig(dir, { dev = false, isServer = false, buildId, con
                     }
                 }
             },
+            minimize: !dev,
             minimizer: !dev ? [
                 new index_1.TerserPlugin(Object.assign({}, terserPluginConfig, { terserOptions: {
                         safari10: true

@@ -4,91 +4,54 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const os_1 = __importDefault(require("os"));
-const is_ci_1 = __importDefault(require("is-ci"));
-const async_sema_1 = __importDefault(require("async-sema"));
 const cacache_1 = __importDefault(require("cacache"));
-const minify_1 = __importDefault(require("./minify"));
-const child_process_1 = require("child_process");
 const find_cache_dir_1 = __importDefault(require("find-cache-dir"));
+const worker_farm_1 = __importDefault(require("worker-farm"));
 const serialize_javascript_1 = __importDefault(require("serialize-javascript"));
-const workerPath = require.resolve('./worker');
+const minify_1 = __importDefault(require("./minify"));
+const worker = require.resolve('./worker');
 class TaskRunner {
     constructor() {
         this.cacheDir = find_cache_dir_1.default({ name: 'next-minifier' });
         // In some cases cpus() returns undefined
         // https://github.com/nodejs/node/issues/19022
-        const cpus = os_1.default.cpus() || { length: 1 };
-        this.concurrency = is_ci_1.default ? 2 : cpus.length - 1 || 1;
-        this.workers = [];
-        this.sema = new async_sema_1.default(this.concurrency);
-        console.log('Using concurrency', this.concurrency);
-    }
-    async createWorker() {
-        const newWorker = child_process_1.fork(workerPath, [], { stdio: 'inherit' });
-        newWorker.on('error', err => {
-            console.error('Terser worker error:', err);
-        });
-        await new Promise(resolve => {
-            const waitReady = msg => {
-                if (msg.type === 'ready') {
-                    newWorker.removeListener('message', waitReady);
-                    resolve();
-                }
-            };
-            newWorker.on('message', waitReady);
-        });
-        this.workers.push(newWorker);
-    }
-    async runTask(options, retry) {
-        if (this.concurrency > 1) {
-            // Create worker since one isn't available
-            if (!this.workers.length)
-                await this.createWorker();
-            let worker = this.workers.shift();
-            if (!worker || !worker.connected || worker.killed) {
-                await this.createWorker();
-                worker = this.workers.shift();
-            }
-            const result = await new Promise(resolve => {
-                const cleanup = () => {
-                    worker.removeListener('message', waitResult);
-                    worker.removeListener('close', handleClose);
-                    if (worker.connected)
-                        this.workers.push(worker);
-                };
-                const handleClose = (code, signal) => {
-                    cleanup();
-                    console.log('Terser worker exited unexpectedly');
-                    resolve(minify_1.default(options));
-                };
-                const waitResult = msg => {
-                    if (msg.type === 'result') {
-                        cleanup();
-                        resolve(msg.result);
-                    }
-                };
-                worker.on('message', waitResult);
-                worker.on('close', handleClose);
-                if (!worker.connected) {
-                    console.log('Worker disconnected unexpectedly, running in main process');
-                    resolve(minify_1.default(options));
-                }
-                else {
-                    worker.send({ type: 'run', options: serialize_javascript_1.default(options) });
-                }
-            });
-            return result;
-        }
-        else {
-            // Just run in current process
-            return minify_1.default(options);
-        }
+        const cpus = Number(process.env.CIRCLE_NODE_TOTAL) || (os_1.default.cpus() || { length: 1 });
+        this.maxConcurrentWorkers = cpus.length - 1;
+        console.log('using maxWorkers', this.maxConcurrentWorkers);
     }
     run(tasks, callback) {
         /* istanbul ignore if */
         if (!tasks.length) {
             callback(null, []);
             return;
+        }
+        if (this.maxConcurrentWorkers > 1) {
+            const workerOptions = process.platform === 'win32'
+                ? {
+                    maxConcurrentWorkers: this.maxConcurrentWorkers,
+                    maxConcurrentCallsPerWorker: 1,
+                }
+                : { maxConcurrentWorkers: this.maxConcurrentWorkers };
+            this.workers = worker_farm_1.default(workerOptions, worker);
+            this.boundWorkers = (options, cb) => {
+                try {
+                    this.workers(serialize_javascript_1.default(options), cb);
+                }
+                catch (error) {
+                    // worker-farm can fail with ENOMEM or something else
+                    cb(error);
+                }
+            };
+        }
+        else {
+            this.boundWorkers = (options, cb) => {
+                try {
+                    cb(null, minify_1.default(options));
+                }
+                catch (error) {
+                    cb(error);
+                }
+            };
         }
         let toRun = tasks.length;
         const results = [];
@@ -100,20 +63,13 @@ class TaskRunner {
             }
         };
         tasks.forEach((task, index) => {
-            const enqueue = async () => {
-                await this.sema.acquire();
-                this.runTask(task).then(result => {
-                    if (result.error) {
-                        console.error('Got error from runTask', result.error);
-                    }
-                    const done = () => {
-                        this.sema.release();
-                        step(index, result);
-                        console.log('Completed task ' + index + '/' + tasks.length);
-                    };
+            const enqueue = () => {
+                this.boundWorkers(task, (error, data) => {
+                    const result = error ? { error } : data;
+                    const done = () => step(index, result);
                     if (this.cacheDir && !result.error) {
                         cacache_1.default
-                            .put(this.cacheDir, serialize_javascript_1.default(task.cacheKeys), JSON.stringify(result))
+                            .put(this.cacheDir, serialize_javascript_1.default(task.cacheKeys), JSON.stringify(data))
                             .then(done, done);
                     }
                     else {
@@ -132,9 +88,9 @@ class TaskRunner {
         });
     }
     exit() {
-        this.workers.forEach(worker => worker.kill());
-        this.workers = [];
-        this.sema.drain();
+        if (this.workers) {
+            worker_farm_1.default.end(this.workers);
+        }
     }
 }
 exports.default = TaskRunner;
