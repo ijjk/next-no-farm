@@ -18,9 +18,10 @@ process.on('message', msg => {
             const options = new Function('exports', 'require', 'module', '__filename', '__dirname', `'use strict'\nreturn ${msg.options}`)(exports, require, module, __filename, __dirname);
             const result = minify_1.default(options);
             send({ type: 'result', result });
+            console.log('sent result');
         }
         catch (error) {
-            console.error(error);
+            console.error('Error running minify', error);
             send({ type: 'result', result: { error: error.message } });
         }
     }

@@ -24,7 +24,7 @@ class TaskRunner {
     async createWorker() {
         const newWorker = child_process_1.fork(workerPath, [], { stdio: 'inherit' });
         newWorker.on('error', err => {
-            console.error('Error creating terser worker', err);
+            console.error('Terser worker error:', err);
         });
         await new Promise(resolve => {
             const waitReady = msg => {

@@ -261,7 +261,7 @@ function getBaseWebpackConfig(dir, { dev = false, isServer = false, buildId, con
         ].filter(Boolean)
     };
     if (typeof config.webpack === 'function') {
-        webpackConfig = config.webpack(webpackConfig, { dir, dev, isServer, buildId, config, defaultLoaders, totalPages });
+        webpackConfig = config.webpack(webpackConfig, { dir, dev, isServer, buildId, config, defaultLoaders, totalPages, webpack: webpack_1.default });
         // @ts-ignore: Property 'then' does not exist on type 'Configuration'
         if (typeof webpackConfig.then === 'function') {
             console.warn('> Promise returned in next config. https://err.sh/zeit/next.js/promise-in-next-config.md');
