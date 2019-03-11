@@ -15,7 +15,8 @@ const warningRegex = /\[.+:([0-9]+),([0-9]+)\]/;
 const JS_REGEX = /\.m?js$/;
 class TerserPlugin {
     constructor(options = {}) {
-        const { terserOptions = {}, warningsFilter = () => true, sourceMap = false, cache = false, } = options;
+        const { terserOptions = {}, warningsFilter = () => true, sourceMap = false, cache = false, cpus, } = options;
+        this.cpus = cpus;
         this.options = {
             warningsFilter,
             sourceMap,
@@ -88,7 +89,7 @@ class TerserPlugin {
     }
     apply(compiler) {
         const optimizeFn = (compilation, chunks, callback) => {
-            const taskRunner = new TaskRunner_1.default();
+            const taskRunner = new TaskRunner_1.default(this.cpus);
             const processedAssets = new WeakSet();
             const tasks = [];
             Array.from(chunks)

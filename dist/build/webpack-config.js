@@ -60,7 +60,8 @@ function getBaseWebpackConfig(dir, { dev = false, isServer = false, buildId, con
     const terserPluginConfig = {
         parallel: true,
         sourceMap: false,
-        cache: true
+        cache: true,
+        cpus: config.experimental.cpus,
     };
     let webpackConfig = {
         mode: webpackMode,

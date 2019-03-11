@@ -3,7 +3,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const os_1 = __importDefault(require("os"));
 const cacache_1 = __importDefault(require("cacache"));
 const find_cache_dir_1 = __importDefault(require("find-cache-dir"));
 const worker_farm_1 = __importDefault(require("worker-farm"));
@@ -11,13 +10,11 @@ const serialize_javascript_1 = __importDefault(require("serialize-javascript"));
 const minify_1 = __importDefault(require("./minify"));
 const worker = require.resolve('./worker');
 class TaskRunner {
-    constructor() {
+    constructor(cpus) {
         this.cacheDir = find_cache_dir_1.default({ name: 'next-minifier' });
         // In some cases cpus() returns undefined
         // https://github.com/nodejs/node/issues/19022
-        const cpus = Number(process.env.CIRCLE_NODE_TOTAL) || (os_1.default.cpus() || { length: 1 });
-        this.maxConcurrentWorkers = cpus.length - 1;
-        console.log('using maxWorkers', this.maxConcurrentWorkers);
+        this.maxConcurrentWorkers = cpus;
     }
     run(tasks, callback) {
         /* istanbul ignore if */
